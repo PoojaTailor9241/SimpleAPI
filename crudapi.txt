@@ -1,0 +1,669 @@
+Working with Entity Framework in .NET Core application
+
+
+1) Install NuGet packages
+
+
+Either using NuGet Package Manager by right clicking on Project and Select Manage NuGet Package
+Now select following packages as per .net core project version
+Microsoft.VisualStudio.Web.CodeGeneration.Design
+Microsoft.EntityFrameworkCore.Tools
+Microsoft.EntityFrameworkCore.SqlServer
+
+
+OR Open NuGet Package Manager Console through Tools -> NuGet Package Manager -> Package Manager Console and use following command for required packages. (Note : change package version as per .Net Core application version)
+Install-Package Microsoft.VisualStudio.Web.CodeGeneration.Design -Version 3.1.4
+Install-Package Microsoft.EntityFrameworkCore.Tools -Version 3.1.8
+Install-Package Microsoft.EntityFrameworkCore.SqlServer -Version 3.1.8
+
+
+2) Create database and prepare connection string
+
+
+3) Use following command for scaffolding EF from Database
+
+
+Scaffold-DbContext "Connection String;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+
+Scaffold-DbContext "Data Source=DESKTOP-4VI8PFH\SQLEXPRESS;Initial Catalog=StudentDB;Integrated Security=True;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+
+Update connection string in scaffold command.
+e.g. 
+Scaffold-DbContext "Data Source=DESKTOP-TU99FBG\JOSHISQLSERVER;Initial Catalog=DICTDB;Integrated Security=True;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+
+
+
+
+OR
+Use .NET CLI Command 
+
+
+dotnet user-secrets set ConnectionStrings:DBConnectionString "DESKTOP-TU99FBG\JOSHISQLSERVER;Initial Catalog=DICTDB;Integrated Security=True;Trusted_Connection=True;"
+
+
+dotnet ef dbcontext scaffold Name=ConnectionStrings:DBConnectionString Microsoft.EntityFrameworkCore.SqlServer 
+
+
+4) Write connection string in appsettings.json file.
+,
+  "ConnectionStrings": {
+    "DBConnectionString": "Connection String;"
+  }
+
+
+Update connection string as per selected database connection string.
+
+
+5) Write following statement in startup.cs file in ConfigureServices method.
+
+
+services.AddDbContext<DICTDBContext>(o => o.UseSqlServer(Configuration.GetConnectionString("DBConnectionString")));
+
+
+Update DataContext object as per Entity created by Scaffolding and also update connection string defined in appsettings.json file.
+
+
+6) Create Controller and View using EF. This will auto generate both using EF.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==============================================================================================
+
+API
+
+New project - ASP.NET Core Web API
+
+-Packages Download
+Tools
+Design
+SqlServer
+
+-Database Connect
+
+-Package Manager Console
+Scaffold-DbContext "" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+
+-AppSettings
+Add ConnectionStrings
+
+-Startup
+Add Service
+
+-Build the project
+
+-Run
+
+-Add Controller
+API - API Controller with Entity 
+
+================================
+
+Add new project in Solution
+-Core(MVC)
+
+In solution->properties
+in startup project 
+-multiple startup
+1-API
+2-CRUD
+start ->apply ->ok
+
+-Copy student model from api to crud application model
+
+add controller
+MVC read/write actions
+
+-----------------------------
+Create Helper Folder
+-Add Class(Helper.cs)
+
+using System.Net.Http;
+ 
+public class StudentApi
+{
+  public HttpClient initial()
+  {
+   var client = new HttpClient();
+   client.BaseAddress = new Url("paste url of api");
+   return client;
+  }
+}
+
+-------------------------------
+
+In CRUD APP
+install package newtonsoft.json
+
+-------------------------------
+IN CONTROLLER
+
+using WebApplication2.Helper;
+
+StudentApi api = new StudentApi();
+
+===========================================================================================
+
+SIMPLE CRUD
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using CellCrud.Helper;
+using CellCrud.Models;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Text;
+
+namespace CellCrud.Controllers
+{
+    public class MobileController : Controller
+    {
+        MobileApi api = new MobileApi();
+        // GET: MobileController
+        public async Task<ActionResult> Index()
+        {
+            List<Mobile> mobiles = new List<Mobile>();
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.GetAsync("api/Mobile");
+            if (res.IsSuccessStatusCode)
+            {
+                var result = res.Content.ReadAsStringAsync().Result;
+                mobiles = JsonConvert.DeserializeObject<List<Mobile>>(result);
+            }
+            return View(mobiles);
+        }
+
+        // GET: MobileController/Details/5
+        public ActionResult Details(int id)
+        {
+            return View();
+        }
+
+        // GET: MobileController/Create
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: MobileController/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(Mobile mobile)
+        {
+            try
+            {
+                HttpClient client = api.initial();
+
+                var data = JsonConvert.SerializeObject(mobile);
+                StringContent content = new StringContent(data, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage res = client.PostAsync("api/Mobile", content).Result;
+                if (res.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("Index");
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        // GET: MobileController/Edit/5
+        public async Task<ActionResult> Edit(int id)
+        {
+            var mobile = new Mobile();
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.GetAsync($"api/Mobile/{id}");
+            if (res.IsSuccessStatusCode)
+            {
+                var result = res.Content.ReadAsStringAsync().Result;
+                mobile = JsonConvert.DeserializeObject<Mobile>(result);
+            }
+
+            return View(mobile);
+        }
+
+        // POST: MobileController/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(Mobile mobile)
+        {
+            try
+            {
+                HttpClient client = api.initial();
+
+                var data = JsonConvert.SerializeObject(mobile);
+                StringContent content = new StringContent(data, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage res = client.PutAsync($"api/Mobile/{mobile.Mobileid}", content).Result;
+                if (res.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("Index");
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        // GET: MobileController/Delete/5
+        public async Task<ActionResult> Delete(int id)
+        {
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.DeleteAsync($"api/Mobile/{id}");
+            if (res.IsSuccessStatusCode)
+            {
+                return RedirectToAction("Index");
+            }
+            return View();
+        }
+
+        // POST: MobileController/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(int id, IFormCollection collection)
+        {
+            try
+            {
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+    }
+}
+
+
+========================================================================================
+
+CRUD WITH SEARCH
+
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using CellCrud.Helper;
+using CellCrud.Models;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Text;
+
+namespace CellCrud.Controllers
+{
+    public class SaleController : Controller
+    {
+        MobileApi api = new MobileApi();
+        // GET: SaleController
+        public async Task<ActionResult> Index(string nsearch)
+        {
+            List<Sale> sales = new List<Sale>();
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.GetAsync("api/Sale");
+            if (res.IsSuccessStatusCode)
+            {
+                var result = res.Content.ReadAsStringAsync().Result;
+                sales = JsonConvert.DeserializeObject<List<Sale>>(result);
+            }
+
+            //List<Sale> plist = sales.Where(o => o.Billamount >= min && o.Billamount <= max).ToList();
+
+            /*if (min == null && max == null && nsearch.Equals(""))
+            {
+                return View(sales);
+            }*/
+
+            if(nsearch!=null)
+            {
+                List<Customer> customers = new List<Customer>();
+                HttpResponseMessage res1 = await client.GetAsync("api/Customer");
+                if (res1.IsSuccessStatusCode)
+                {
+                    var result = res1.Content.ReadAsStringAsync().Result;
+                    customers = JsonConvert.DeserializeObject<List<Customer>>(result);
+                }
+                Customer nlist = customers.Where(o => o.Name.Equals(nsearch)).FirstOrDefault();
+                int id = nlist.Customerid;
+                List<Sale> nshow = sales.Where(o => o.Customerid.Equals(id)).ToList();
+                return View(nshow);
+            }
+
+            return View(sales);
+        }
+
+        // GET: SaleController/Details/5
+        public ActionResult Details(int id)
+        {
+            return View();
+        }
+
+        // GET: SaleController/Create
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: SaleController/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(Sale sale)
+        {
+            try
+            {
+                HttpClient client = api.initial();
+
+                var data = JsonConvert.SerializeObject(sale);
+                StringContent content = new StringContent(data, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage res = client.PostAsync("api/Sale", content).Result;
+                if (res.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("Index");
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        // GET: SaleController/Edit/5
+        public async Task<ActionResult> Edit(int id)
+        {
+            var sale = new Sale();
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.GetAsync($"api/Sale/{id}");
+            if (res.IsSuccessStatusCode)
+            {
+                var result = res.Content.ReadAsStringAsync().Result;
+                sale = JsonConvert.DeserializeObject<Sale>(result);
+            }
+
+            return View(sale);
+        }
+
+        // POST: SaleController/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit(Sale sale)
+        {
+            try
+            {
+                HttpClient client = api.initial();
+
+                var data = JsonConvert.SerializeObject(sale);
+                StringContent content = new StringContent(data, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage res = client.PutAsync($"api/Sale/{sale.Saleid}", content).Result;
+                if (res.IsSuccessStatusCode)
+                {
+                    return RedirectToAction("Index");
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        // GET: SaleController/Delete/5
+        public async Task<ActionResult> Delete(int id)
+        {
+            HttpClient client = api.initial();
+            HttpResponseMessage res = await client.DeleteAsync($"api/Sale/{id}");
+            if (res.IsSuccessStatusCode)
+            {
+                return RedirectToAction("Index");
+            }
+            return View();
+        }
+
+        // POST: SaleController/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Delete(int id, IFormCollection collection)
+        {
+            try
+            {
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+    }
+}
+
+
+=============================================================================================
+
+SIMPLE ADVANCED SEARCH
+
+
+[HttpPost]
+        public ActionResult Index(string Search)
+        {
+            if (Session["uid"] != null)
+            {
+                if (Search == null)
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                }
+                if (Search.ToLower() == "all" || Search == "")
+                {
+                    return View(db.productionevents.ToList());
+                }
+
+                List<productionevent> eventNS = db.productionevents.Where(p => p.ename.Contains(Search) || Search == null).ToList();
+                if (eventNS.Count() == 0)
+                {
+                    List<productionevent> eventDS = db.productionevents.Where(p => p.description.Contains(Search) || Search == null).ToList();
+                    if (eventDS.Count() == 0)
+                    {
+                        List<productionevent> eventDaS = db.productionevents.Where(p => p.startdate.ToString().Contains(Search)).ToList();
+                        if (eventDaS.Count() == 0)
+                        {
+                            TempData["NotFoundpe"] = "No such event found";
+                        }
+                        else
+                        {
+                            return View(eventDaS.ToList());
+                        }
+                    }
+                    else
+                    {
+                        return View(eventDS.ToList());
+                    }
+                }
+                else
+                {
+                    return View(eventNS.ToList());
+                }
+
+                return View(eventNS.ToList());
+            }
+            else if (Session["pid"] != null)
+            {
+                int pid = Convert.ToInt32(HttpContext.Session["pid"]);
+                if (Search == null)
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                }
+                if (Search.ToLower() == "all" || Search == "")
+                {
+                    var results = db.productionevents.Where(x => x.pid.Equals(pid));
+                    TempData["pdata"] = results;
+                    return View();
+                }
+                List<productionevent> eventNS = db.productionevents.Where(p => p.ename.Contains(Search) && p.pid.Equals(pid)).ToList();
+                if (eventNS.Count() == 0)
+                {
+                    List<productionevent> eventDS = db.productionevents.Where(p => p.description.Contains(Search) && p.pid.Equals(pid)).ToList();
+                    if (eventDS.Count() == 0)
+                    {
+                        List<productionevent> eventDaS = db.productionevents.Where(p => p.startdate.ToString().Contains(Search) && p.pid.Equals(pid)).ToList();
+                        if (eventDaS.Count() == 0)
+                        {
+                            TempData["NotFoundp"] = "No such registered event";
+                        }
+                        else
+                        {
+                            TempData["pdata"] = eventDaS;
+                            return View(eventDaS.ToList());
+                        }
+                    }
+                    else
+                    {
+                        TempData["pdata"] = eventDS;
+                        return View(eventDS.ToList());
+                    }
+                }
+                else
+                {
+                    TempData["pdata"] = eventNS;
+                    return View(eventNS.ToList());
+                }
+                return View();
+            }
+            else
+            {
+                return RedirectToAction("Login", "User");
+            }
+        }
+
+
+
+
+HTML:
+
+
+@using (Html.BeginForm(FormMethod.Post))
+                        {
+                            <center>
+                                <div class="mx-0 d-inline-flex" style="max-width:800px">
+                                    @Html.TextBox("Search", "", new { @class = "form-control", placeholder = "Enter Event" })
+                                    <div class="mx-2">
+                                        <input type="submit" class="btn btn-outline-primary" value="Search" name="submit" />
+                                    </div>
+                                </div>
+
+                            </center>
+                        }
+                        <br /><br />
+                        <center>
+                            <p style="color:indianred">@TempData["NotFound"]</p>
+                        </center>
+==============================================================================================
+
+LOGIN
+
+
+public ActionResult Login(adminlogin adminlogin )
+        {
+            if (ModelState.IsValid)
+            {
+                admin adm = db.admins.Where(a => a.username.Equals(adminlogin.username) && a.password.Equals(adminlogin.password)).FirstOrDefault();
+                if (adm != null)
+                {
+                    Session["aid"] = adm.aid.ToString();
+                    //Session["username"] = adm.username.ToString();
+                    Session["aname"] = adm.aname.ToString();
+                    Session["image"] = adm.photo.ToString();
+                    return RedirectToAction("Dashboard");
+                }
+                else if (adminlogin.username != null && adminlogin.password != null)
+                {
+                    ViewBag.errmsg = "Invalid Credentials";
+                }
+            }
+            return View();
+        }
+
+==============================================================================================
+
+DROPDOWN SEARCH 
+
+[HttpPost]
+
+        public ActionResult Index(int tid)
+        {
+            if (Session["pid"] != null)
+            {
+                if(tid.Equals(null)|| tid == 0)
+                {
+                    var talent = db.talents.ToList();
+                    TempData["talents"] = talent;
+                    return View(db.userprofiles.ToList());
+                }
+                List<userprofile> plan = db.userprofiles.Where(p => p.tid.Equals(tid)).ToList();
+                if (plan.Count() == 0)
+                {
+                    TempData["NotFound"] = "No such talent found";
+                }
+                var talents = db.talents.ToList();
+                TempData["talents"] = talents;
+                return View(plan.ToList());
+            }
+            else
+            {
+                return RedirectToAction("Login", "User");
+            }
+        }
+
+
+
+
+HTML:
+
+@using (Html.BeginForm(FormMethod.Post))
+            {
+                <center>
+                <div class="mx-0 d-inline-flex" style="max-width:800px">
+                    <select class="form-control" id="tid" name="tid">
+                        <option selected="selected" value="0">-- Select Talent --</option>
+                        @foreach (var data in (IEnumerable<talent>)TempData["talents"])
+                        {
+                            <option value="@data.tid">@Html.DisplayFor(modelItem => data.ttype)</option>
+                        }
+                    </select>
+                        <input type="submit" class="btn btn-outline-primary mx-2" value="Search" name="submit" />
+                </div>
+                </center>
+             }
+        <br /><br />
+
+            <center>
+                <p style="color:indianred">@TempData["NotFound"]</p>
+            </center>
+
+================================================================================================================================
